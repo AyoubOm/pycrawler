@@ -8,28 +8,33 @@ import tldextract
 from collections import defaultdict
 
 
-logging.basicConfig(format='%(asctime)s %(levelname)s:%(message)s', level=logging.INFO)
+logging.basicConfig(format='%(asctime)s %(levelname)s %(message)s', level=logging.INFO)
 
-nbFetchers = 5
+nbFetchers = 23
 urlsToCrawl = [[] for _ in range(nbFetchers)] # written by Crawler, read by Fetcher
 pages = [] # written by Fetcher, read by Crawler
 
 
 def crawl(runEvent):
-	seeds = ['https://www.imdb.com/',
-	'https://www.wikipedia.org/',
-	'https://www.apache.org/',
-	'https://www.britannica.com/',
-	'https://www.medium.com/',
-	'https://www.quora.com/',
-	'https://stackoverflow.com/']
+	seeds = [
+			'https://www.imdb.com/',
+			'https://www.wikipedia.org/',
+			'https://www.apache.org/',
+			'https://www.britannica.com/',
+			'https://www.medium.com/',
+			'https://www.quora.com/',
+			'https://stackoverflow.com/',
+			'https://spotify.com',
+			'https://youtube.com',
+			'https://cisco.com',
+			'https://cloudflare.com',
+			'https://godaddy.com',
+			'https://openclassrooms.com']
 
 	for seed in seeds:
 		domain = tldextract.extract(seed).domain
 		hashVal = hash(domain)
 		urlsToCrawl[hashVal % nbFetchers].append(seed)
-
-	print(urlsToCrawl)
 
 	visited = set([])
 
@@ -42,7 +47,7 @@ def crawl(runEvent):
 				if path:
 					if path.startswith('/'):
 						path = urljoin(url, path)
-					if path not in visited and path.startswith('http'): # this will make crawler ignore some links I guess
+					if path not in visited and path.startswith('http'):
 						domain = tldextract.extract(path).domain
 						hashVal = hash(domain)
 						urlsToCrawl[hashVal % nbFetchers].append(path)
@@ -55,8 +60,9 @@ def fetch(fetcherId, runEvent):
 	while runEvent.is_set():
 		if urlsToCrawl[fetcherId]:
 			url = urlsToCrawl[fetcherId].pop(0)
-			logging.info(f'Fetching: {url}')
+			logging.info(f'Fetcher-{fetcherId+1} Fetching: {url}')
 			pages.append((url, requests.get(url).text))
+
 
 
 
