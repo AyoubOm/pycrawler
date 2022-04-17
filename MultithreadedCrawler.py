@@ -10,7 +10,7 @@ from collections import defaultdict
 
 logging.basicConfig(format='%(asctime)s %(levelname)s %(message)s', level=logging.INFO)
 
-nbFetchers = 23
+nbFetchers = 37
 urlsToCrawl = [[] for _ in range(nbFetchers)] # written by Crawler, read by Fetcher
 pages = [] # written by Fetcher, read by Crawler
 counts = [0]*nbFetchers
@@ -63,8 +63,13 @@ def fetch(fetcherId, runEvent):
 		if urlsToCrawl[fetcherId]:
 			url = urlsToCrawl[fetcherId].pop(0)
 			logging.info(f'Fetcher-{fetcherId+1}\tFetching: {url}')
-			pages.append((url, session.get(url).text))
-			counts[fetcherId] += 1
+			try:
+				html = session.get(url).text
+				pages.append((url, html))
+				counts[fetcherId] += 1
+			except:
+				logging.error(f'Fetcher-{fetcherId+1}\t error fetching {url}')
+
 
 	logging.info(f'Fetcher-{fetcherId+1}\tNb urls={counts[fetcherId]}')
 
@@ -91,10 +96,11 @@ def main(benchmark=False):
 			for _ in range(150): # => 5 minutes benchmark
 				sleep(2)
 
-		runEvent.clear()
-
 	except KeyboardInterrupt:
 		runEvent.clear()
+
+	runEvent.clear()
+	
 
 	crawler.join()
 	for fetcher in fetchers:
