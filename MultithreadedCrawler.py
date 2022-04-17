@@ -13,6 +13,7 @@ logging.basicConfig(format='%(asctime)s %(levelname)s %(message)s', level=loggin
 nbFetchers = 23
 urlsToCrawl = [[] for _ in range(nbFetchers)] # written by Crawler, read by Fetcher
 pages = [] # written by Fetcher, read by Crawler
+counts = [0]*nbFetchers
 
 
 def crawl(runEvent):
@@ -57,16 +58,21 @@ def crawl(runEvent):
 
 
 def fetch(fetcherId, runEvent):
+	session = requests.Session()
 	while runEvent.is_set():
 		if urlsToCrawl[fetcherId]:
 			url = urlsToCrawl[fetcherId].pop(0)
-			logging.info(f'Fetcher-{fetcherId+1} Fetching: {url}')
-			pages.append((url, requests.get(url).text))
+			logging.info(f'Fetcher-{fetcherId+1}\tFetching: {url}')
+			pages.append((url, session.get(url).text))
+			counts[fetcherId] += 1
+
+	logging.info(f'Fetcher-{fetcherId+1}\tNb urls={counts[fetcherId]}')
 
 
 
 
-def main():
+
+def main(benchmark=False):
 	runEvent = Event()
 	runEvent.set()
 
@@ -78,16 +84,26 @@ def main():
 		fetcher.start()
 
 	try:
-		while True:
-			sleep(2)
+		if not benchmark:
+			while True:
+				sleep(2)
+		else:
+			for _ in range(150): # => 5 minutes benchmark
+				sleep(2)
+
+		runEvent.clear()
+
 	except KeyboardInterrupt:
 		runEvent.clear()
-		crawler.join()
-		for fetcher in fetchers:
-			fetcher.join()
+
+	crawler.join()
+	for fetcher in fetchers:
+		fetcher.join()
+
+	print(f'Number of fetched pages in 5mins = {sum(counts)}')
 
 
 if __name__ == '__main__':
-	main()
+	main(True)
 
 
